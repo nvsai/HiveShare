@@ -1,8 +1,8 @@
 import socket
-import socket
 import time
 from socket import AF_INET, SOCK_DGRAM,SOCK_STREAM,SHUT_RDWR
 import threading
+import nmap
 import sys
 import os
 
@@ -67,3 +67,54 @@ def receive_out():
     client_socket.close()
     s.close()
     return "File received"
+    
+def send_d():
+    discover_list=[]
+    device_list={}
+    PORT_NUMBER = 5000
+    SIZE = 1024
+    my_ip=[(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]
+    print("Your Ip is:",my_ip)
+    scanner=nmap.PortScanner()
+    ip_list=[int(i) for i in my_ip.split(".")]
+    ip_list[len(ip_list)-1]=0
+    ip_list=[str(i) for i in ip_list]
+    ip_addr='.'.join(ip_list)+'/24'
+    print(ip_addr)
+    scanner.scan(hosts=ip_addr, arguments='-sP')
+    hosts_list = [(x, scanner[x]['status']['state']) for x in scanner.all_hosts()]
+    for host, status in hosts_list:
+        print('{0}:{1}'.format(host, status))
+        discover_list.append(host)
+    for ip in discover_list:
+        message=my_ip
+        print(ip)
+        try:
+            otherSocket=socket.socket(AF_INET, SOCK_DGRAM)
+            otherSocket.connect((ip,PORT_NUMBER))
+            otherSocket.send(message.encode('utf-8'))
+            otherSocket.close()
+            print("sending done")
+            time.sleep(2)
+            
+            hostName = socket.gethostbyname( '0.0.0.0' )
+            mySocket=socket.socket(AF_INET, SOCK_DGRAM)
+            mySocket.bind( (hostName, PORT_NUMBER) )
+
+            while True:
+                mySocket.settimeout(3)
+                (data,addr) = mySocket.recvfrom(SIZE)
+                break
+                
+            
+            mySocket.close()
+            namex=data.decode('utf-8')
+            print(namex)
+            device_list[ip]=namex
+            
+                
+        except Exception as e:
+            print(e)
+            continue
+
+    return device_list
